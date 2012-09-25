@@ -4,7 +4,7 @@ Plugin Name: Mend Sticky Posts
 Plugin URI: http://www.redbrickstudios.co.uk
 Description: Wordpress's Sticky Posts behaviour is still incomprehensible, let's fix it.
 Author: Martin Shopland
-Version: 1.0
+Version: 1.1
 */
 
 /*
@@ -36,21 +36,28 @@ class MendStickyPosts
 {
     public function __construct()
     {
-        add_filter('posts_orderby', array($this, '_hookPostsOrderBy'));
+        add_filter('posts_orderby', array($this, '_hookPostsOrderBy'), 11, 2);
     }
     
-    public function _hookPostsOrderBy($orderBy)
+    public function _hookPostsOrderBy($orderBy, $query)
     {
         global $wpdb;       
-        $stickyPosts = get_option('sticky_posts');
-        if($stickyPosts)
+        
+        if($query->is_home && !$query->query_vars['ignore_sticky_posts'])
         {
-            $orderBy = '(' . $wpdb->posts . '.ID IN (' . 
-                implode(',', $stickyPosts) . ')) DESC, ' . $orderBy;              
-            add_filter(
-                'pre_option_sticky_posts', 
-                array($this, '_hookOptionStickyPosts')
-            );
+        	$stickyPosts = get_option('sticky_posts');
+			if(is_array($stickyPosts) && !empty($stickyPosts))
+			{
+				$sticky = '(' . $wpdb->posts . '.ID IN (' . 
+                	implode(',', $stickyPosts) . ')) DESC';
+					
+				$orderBy = empty($orderBy) ? $sticky : $sticky . ',' . $orderBy;
+					           
+	            add_filter(
+	                'pre_option_sticky_posts',
+	                array($this, '_hookOptionStickyPosts')
+	            );
+			}
         }
         return $orderBy;
     }
